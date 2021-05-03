@@ -69,6 +69,10 @@ resource "aws_subnet" "subnets" {
 
   # Subnetを作成するAZ
   availability_zone = data.aws_availability_zones.available.names[count.index]
+
+  tags = {
+    Name = "aws-elb-ec2-subnet-${count.index + 1}"
+  }
 }
 
 resource "aws_key_pair" "elb_ec2" {
@@ -147,5 +151,33 @@ resource "aws_lb_listener" "alb_ec2" {
   default_action {
     type = "forward"
     target_group_arn = aws_lb_target_group.lb_target_group.arn
+  }
+}
+
+resource "aws_ebs_volume" "second_ebs" {
+  availability_zone = data.aws_availability_zones.available.names[0]
+  encrypted = true
+  size = 1
+}
+
+resource "aws_volume_attachment" "second_ebs" {
+  device_name = "/dev/sdh"
+  instance_id = aws_instance.ec2[0].id
+  volume_id = aws_ebs_volume.second_ebs.id
+}
+
+resource "null_resource" "mount_ebs" {
+  provisioner "remote-exec" {
+    connection {
+      host = aws_instance.ec2[0].public_ip
+      user = "ev2-user"
+      private_key = "~/.ssh/id_rs"
+    }
+
+    inline = [
+      "sudo mkfs -t ext4 /dev/sdh",
+      "sudo mkdir /data2",
+      "sudo mount /dev/sdh /data2"
+    ]
   }
 }
