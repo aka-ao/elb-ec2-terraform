@@ -161,17 +161,21 @@ resource "aws_ebs_volume" "second_ebs" {
 }
 
 resource "aws_volume_attachment" "second_ebs" {
+  depends_on = [aws_instance.ec2[0], aws_ebs_volume.second_ebs]
   device_name = "/dev/sdh"
   instance_id = aws_instance.ec2[0].id
   volume_id = aws_ebs_volume.second_ebs.id
 }
 
 resource "null_resource" "mount_ebs" {
+  depends_on = [aws_volume_attachment.second_ebs]
+
   provisioner "remote-exec" {
     connection {
-      host = aws_instance.ec2[0].public_ip
-      user = "ev2-user"
-      private_key = "~/.ssh/id_rs"
+      type        = "ssh"
+      host        = aws_eip.elb_ec2[0].public_ip
+      user        = "ec2-user"
+      private_key = file("~/.ssh/id_rsa")
     }
 
     inline = [
