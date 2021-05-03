@@ -21,8 +21,8 @@ data "aws_route_table" "elb_ec2" {
 }
 
 resource "aws_route" "route" {
-  route_table_id = data.aws_route_table.elb_ec2.id
-  gateway_id = aws_internet_gateway.elb_ec2.id
+  route_table_id         = data.aws_route_table.elb_ec2.id
+  gateway_id             = aws_internet_gateway.elb_ec2.id
   destination_cidr_block = "0.0.0.0/0"
 }
 
@@ -33,26 +33,26 @@ resource "aws_internet_gateway" "elb_ec2" {
 
 resource "aws_security_group" "elb_ec2" {
   vpc_id = aws_vpc.elb_ec2_vpc.id
-  name = "elb_ec2"
+  name   = "elb_ec2"
   ingress {
-    from_port = 80
-    protocol = "TCP"
-    to_port = 80
+    from_port   = 80
+    protocol    = "TCP"
+    to_port     = 80
     cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
-    from_port = 22
-    protocol = "TCP"
-    to_port = 22
+    from_port   = 22
+    protocol    = "TCP"
+    to_port     = 22
     cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
-    from_port       = 0
-    to_port         = 0
-    protocol        = "-1"
-    cidr_blocks     = ["0.0.0.0/0"]
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
@@ -62,10 +62,10 @@ data "aws_availability_zones" "available" {
 
 resource "aws_subnet" "subnets" {
   count = 2
-//  # 先程作成したVPCを参照し、そのVPC内にSubnetを立てる
+  //  # 先程作成したVPCを参照し、そのVPC内にSubnetを立てる
   vpc_id = aws_vpc.elb_ec2_vpc.id
 
-  cidr_block = "10.0.${count.index+1}.0/24"
+  cidr_block = "10.0.${count.index + 1}.0/24"
 
   # Subnetを作成するAZ
   availability_zone = data.aws_availability_zones.available.names[count.index]
@@ -115,20 +115,20 @@ resource "aws_eip" "elb_ec2" {
 }
 
 resource "aws_alb" "ec2_alb" {
-  name = "ec2alb"
-  subnets = aws_subnet.subnets.*.id
+  name            = "ec2alb"
+  subnets         = aws_subnet.subnets.*.id
   security_groups = [aws_security_group.elb_ec2.id]
 
 }
 
 resource "aws_lb_target_group" "lb_target_group" {
-  name = "ec2alb"
+  name     = "ec2alb"
   protocol = "HTTP"
-  port = "80"
-  vpc_id = aws_vpc.elb_ec2_vpc.id
+  port     = "80"
+  vpc_id   = aws_vpc.elb_ec2_vpc.id
   health_check {
     protocol = "HTTP"
-    path = "/"
+    path     = "/"
   }
 }
 
@@ -137,34 +137,34 @@ output "lb_result" {
 }
 
 resource "aws_lb_target_group_attachment" "alb_ec2" {
-  count = 2
+  count            = 2
   target_group_arn = aws_lb_target_group.lb_target_group.arn
-  target_id = aws_instance.ec2[count.index].id
+  target_id        = aws_instance.ec2[count.index].id
   port             = 80
 }
 
 resource "aws_lb_listener" "alb_ec2" {
   load_balancer_arn = aws_alb.ec2_alb.arn
-  port = 80
-  protocol = "HTTP"
+  port              = 80
+  protocol          = "HTTP"
 
   default_action {
-    type = "forward"
+    type             = "forward"
     target_group_arn = aws_lb_target_group.lb_target_group.arn
   }
 }
 
 resource "aws_ebs_volume" "second_ebs" {
   availability_zone = data.aws_availability_zones.available.names[0]
-  encrypted = true
-  size = 1
+  encrypted         = true
+  size              = 1
 }
 
 resource "aws_volume_attachment" "second_ebs" {
-  depends_on = [aws_instance.ec2[0], aws_ebs_volume.second_ebs]
+  depends_on  = [aws_instance.ec2[0], aws_ebs_volume.second_ebs]
   device_name = "/dev/sdh"
   instance_id = aws_instance.ec2[0].id
-  volume_id = aws_ebs_volume.second_ebs.id
+  volume_id   = aws_ebs_volume.second_ebs.id
 }
 
 resource "null_resource" "mount_ebs" {
