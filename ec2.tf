@@ -1,5 +1,5 @@
 resource "aws_key_pair" "elb_ec2" {
-  public_key = file("~/.ssh/id_rsa.pub")
+  public_key = file(var.public_key_path)
 }
 
 resource "aws_instance" "ec2" {
